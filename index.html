@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>دليل وعي | فاحص المنتجات</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <style>
+        :root {
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --primary-text: #1f2937;
+            --secondary-text: #6b7280;
+            
+            /* ألوان الحالات (هادئة ومريحة) */
+            --safe-color: #10b981;       /* أخضر زمردي */
+            --safe-bg: #d1fae5;
+            
+            --boycott-color: #ef4444;    /* أحمر ناعم */
+            --boycott-bg: #fee2e2;
+            
+            --unclear-color: #f59e0b;    /* برتقالي دافئ */
+            --unclear-bg: #fef3c7;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* رأس الصفحة */
+        header {
+            width: 100%;
+            padding: 20px;
+            text-align: center;
+            background: transparent;
+            margin-bottom: 10px;
+        }
+
+        header h1 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--primary-text);
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+        
+        header p {
+            font-size: 0.9rem;
+            color: var(--secondary-text);
+            margin: 5px 0 0 0;
+        }
+
+        /* حاوية الكاميرا */
+        .scanner-wrapper {
+            width: 90%;
+            max-width: 400px;
+            height: 350px;
+            background: #e5e7eb;
+            border-radius: 24px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1);
+            border: 4px solid white;
+        }
+
+        #reader {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 20px;
+        }
+
+        /* إخفاء عناصر المكتبة المزعجة */
+        #reader__scan_region {
+            background: transparent !important;
+        }
+        #reader__dashboard_section_csr button {
+            display: none !important; /* إخفاء أزرار المكتبة الافتراضية */
+        }
+
+        /* إطار التوجيه فوق الكاميرا */
+        .scan-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 220px;
+            height: 220px;
+            border: 2px dashed rgba(255,255,255,0.8);
+            border-radius: 20px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .scan-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: 0.9rem;
+            z-index: 10;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* كارت النتيجة المنبثق */
+        .result-modal {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: var(--card-bg);
+            border-radius: 30px 30px 0 0;
+            padding: 30px 20px 40px 20px;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+            transform: translateY(110%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 100;
+            text-align: center;
+        }
+
+        .result-modal.active {
+            transform: translateY(0);
+        }
+
+        /* الخط الصغير أعلى المودال للسحب */
+        .modal-drag-line {
+            width: 40px;
+            height: 5px;
+            background-color: #e5e7eb;
+            border-radius: 10px;
+            margin: 0 auto 25px auto;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+
+        .badge-safe { background: var(--safe-bg); color: var(--safe-color); }
+        .badge-boycott { background: var(--boycott-bg); color: var(--boycott-color); }
+        .badge-unclear { background: var(--unclear-bg); color: var(--unclear-color); }
+
+        .result-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary-text);
+            margin: 0 0 10px 0;
+        }
+
+        .result-desc {
+            font-size: 1rem;
+            color: var(--secondary-text);
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .source-link {
+            display: inline-block;
+            font-size: 0.9rem;
+            color: #3b82f6;
+            text-decoration: none;
+            background: #eff6ff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .btn-reset {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            background: var(--primary-text);
+            color: white;
+            font-family: 'Cairo', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-reset:active {
+            transform: scale(0.98);
+        }
+
+        /* حالة التحميل */
+        .loading-text {
+            margin-top: 20px;
+            color: var(--secondary-text);
+            font-size: 0.9rem;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>دليل وعي</h1>
+        <p>امسح الباركود للتأكد من المنتج</p>
+    </header>
+
+    <div class="scanner-wrapper">
+        <div id="reader"></div>
+        <div class="scan-overlay"></div>
+        <div class="scan-hint">وجّه الكاميرا نحو الرمز الشريطى</div>
+    </div>
+
+    <div class="loading-text" id="cameraStatus">جاري تشغيل الكاميرا...</div>
+
+    <div id="resultModal" class="result-modal">
+        <div class="modal-drag-line"></div>
+        
+        <div id="statusBadge" class="status-badge">
+            <i class="fas fa-check-circle" style="margin-left: 8px;"></i>
+            <span id="badgeText">آمن</span>
+        </div>
+
+        <h2 class="result-title" id="resTitle">عنوان النتيجة</h2>
+        <p class="result-desc" id="resDesc">تفاصيل المنتج ستظهر هنا...</p>
+        
+        <a href="#" id="resSource" class="source-link" target="_blank">المصدر <i class="fas fa-external-link-alt"></i></a>
+        
+        <button class="btn-reset" onclick="resetScanner()">فحص منتج آخر</button>
+    </div>
+
+    <script>
+        const html5QrcodeScanner = new Html5Qrcode("reader");
+        const resultModal = document.getElementById('resultModal');
+        const cameraStatus = document.getElementById('cameraStatus');
+
+        // قاعدة بيانات وهمية (يمكنك تعديلها)
+        const productDatabase = {
+            "7290000000000": { 
+                type: "boycott", 
+                text: "مقاطعة", 
+                title: "منتج من الكيان", 
+                desc: "هذا المنتج يحمل الباركود 729 الخاص بدولة الاحتلال.",
+                source: "https://example.com"
+            },
+            "5449000000996": { 
+                type: "boycott", 
+                text: "مقاطعة", 
+                title: "كوكا كولا", 
+                desc: "الشركة مصنفة ضمن المقاطعة لوجود مصانع في المستوطنات.",
+                source: "https://boycott.com"
+            },
+            "6221000000000": { 
+                type: "safe", 
+                text: "مسموح", 
+                title: "منتج محلي", 
+                desc: "منتج مصري 100% ولا يوجد شبهات حوله.",
+                source: ""
+            }
+        };
+
+        const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+
+        function startScanner() {
+            html5QrcodeScanner.start(
+                { facingMode: "environment" }, 
+                config, 
+                onScanSuccess, 
+                onScanFailure
+            ).then(() => {
+                cameraStatus.innerText = "";
+            }).catch(err => {
+                cameraStatus.innerText = "يرجى السماح للكاميرا بالعمل";
+                cameraStatus.style.color = "red";
+            });
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            html5QrcodeScanner.stop().then(() => {
+                analyzeProduct(decodedText);
+            });
+        }
+
+        function onScanFailure(error) {
+            // تجاهل الأخطاء المتكررة أثناء البحث
+        }
+
+        function analyzeProduct(barcode) {
+            let data = productDatabase[barcode];
+
+            // المنطق الافتراضي
+            if (!data) {
+                if(barcode.startsWith("729")) {
+                    data = { type: "boycott", text: "مقاطعة", title: "منتج 729", desc: "المنتج يحمل باركود دولة الاحتلال.", source: "قاعدة الباركود الدولية" };
+                } else {
+                    data = { type: "unclear", text: "غير واضح", title: "لا توجد بيانات", desc: `لم نجد هذا الباركود (${barcode}) في القائمة الموثقة حالياً.`, source: "" };
+                }
+            }
+
+            // تحديث الواجهة
+            const badge = document.getElementById('statusBadge');
+            const badgeText = document.getElementById('badgeText');
+            const resTitle = document.getElementById('resTitle');
+            const resDesc = document.getElementById('resDesc');
+            const resSource = document.getElementById('resSource');
+
+            // تنظيف الكلاسات القديمة
+            badge.className = 'status-badge'; 
+            
+            // إضافة البيانات الجديدة
+            if (data.type === 'safe') {
+                badge.classList.add('badge-safe');
+                badge.innerHTML = '<i class="fas fa-check-circle" style="margin-left:8px"></i> مسموح';
+                resTitle.style.color = "var(--safe-color)";
+            } else if (data.type === 'boycott') {
+                badge.classList.add('badge-boycott');
+                badge.innerHTML = '<i class="fas fa-ban" style="margin-left:8px"></i> مقاطعة';
+                resTitle.style.color = "var(--boycott-color)";
+            } else {
+                badge.classList.add('badge-unclear');
+                badge.innerHTML = '<i class="fas fa-question-circle" style="margin-left:8px"></i> غير واضح';
+                resTitle.style.color = "var(--unclear-color)";
+            }
+
+            resTitle.innerText = data.title;
+            resDesc.innerText = data.desc;
+
+            if (data.source && data.type === 'boycott') {
+                resSource.style.display = "inline-block";
+                resSource.href = data.source;
+            } else {
+                resSource.style.display = "none";
+            }
+
+            // إظهار المودال
+            resultModal.classList.add('active');
+        }
+
+        function resetScanner() {
+            resultModal.classList.remove('active');
+            setTimeout(() => {
+                startScanner();
+            }, 500);
+        }
+
+        // بدء التشغيل
+        startScanner();
+
+    </script>
+</body>
+</html>
